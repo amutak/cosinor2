@@ -1,0 +1,58 @@
+population.cosinor.lm<-function(firstsubj,lastsubj,timecol,period,data,na.action){
+  population.cosinor<-list()
+  cosinors<-list()
+  popmat<-data.frame(matrix(nrow=3,ncol=lastsubj-firstsubj+1))
+  coefficients<-data.frame(matrix(nrow=1,ncol=3))
+  colnames(coefficients)<-c("MESOR","Amplitude","Acrophase")
+  subject<-integer()
+  amplitude<-integer()
+  acrophase<-integer()
+  fitted.values<-vector()
+  residuals<-vector()
+  for (subject in firstsubj:lastsubj) {
+    colnames(data)[subject]<-"Subjy"
+    colnames(data)[subject-1]<-"done"
+    colnames(data)[timecol]<-"Time"
+    cosinors[[subject]]<-cosinor.lm(Subjy~time(Time),period=period,data=data,na.action=na.action)
+    popmat[[subject]]<-cosinors[[subject]]$fit$coefficients
+  }
+  population.cosinor[[1]]<-cosinors
+  population.cosinor[[2]]<-popmat
+  names(population.cosinor)<-c("single.cos","pop.mat")
+  population.cosinor$single.cos[[1]]<-NULL
+  population.cosinor$pop.mat<-population.cosinor$pop.mat[,-1]
+  coefs<-rowMeans(popmat, na.rm = T)
+  MESOR<-coefs[[1]]
+  beta<-coefs[[2]]
+  gamma<-coefs[[3]]
+  amplitude<-sqrt(beta^2+gamma^2)
+  if(beta>0 & gamma>0){
+    acrophase<-0+(-1*atan(abs(gamma/beta)))
+  }
+  else if(beta>0 & gamma<0){
+    acrophase<-2*-1*pi+(1*atan(abs(gamma/beta)))
+  }
+  else if(beta<0 & gamma>0){
+    acrophase<-pi*-1+(1*atan(abs(gamma/beta)))
+  }
+  else {
+    acrophase<-pi*-1+(-1*atan(abs(gamma/beta)))
+  }
+  coefficients[,1]<-MESOR
+  coefficients[,2]<-amplitude
+  coefficients[,3]<-acrophase
+  population.cosinor[[3]]<-coefficients
+  names(population.cosinor)<-c("single.cos","pop.mat","coefficients")
+  data2<-data[,-timecol]
+  emp.mean<-rowMeans(data2, na.rm=T)
+  for (n in 1:nrow(data)){
+    fitted.values<-c(fitted.values,MESOR+(amplitude*cos(((2*pi*data[n,timecol])/period)+acrophase)))
+  }
+  residuals<-emp.mean-fitted.values
+  population.cosinor[[4]]<-emp.mean
+  population.cosinor[[5]]<-fitted.values
+  population.cosinor[[6]]<-residuals
+  names(population.cosinor)<-c("single.cos","pop.mat","coefficients","emp.mean","fitted.values","residuals")
+  print(coefficients)
+  return(population.cosinor)
+}
