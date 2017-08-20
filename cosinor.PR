@@ -1,0 +1,13 @@
+cosinor.PR<-function(x){
+  if (exists("pop.mat", where = x) == T) {
+    corr<-rcorr(x$fitted.values,x$emp.mean)
+    PR<-data.frame(cbind(corr$r[[2]],corr$r[[2]]^2,corr$P[[2]]))
+    colnames(PR)<-c("r","Percent rhythm","p-value")
+  }
+  else {
+    corr<-rcorr(x$fit$fitted.values,x$fit$model[,1])
+    PR<-data.frame(cbind(corr$r[[2]],corr$r[[2]]^2,corr$P[[2]]))
+    colnames(PR)<-c("r","Percent rhythm","p-value")
+  }
+  return(PR)
+}
