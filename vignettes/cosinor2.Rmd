@@ -1,0 +1,242 @@
+---
+title: "cosinor2 vignette"
+author: "Augustin Mutak"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{cosinor2 vignette}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+This vignette is intended to be a short guide to using the `cosinor2` package. The vignette will briefly walk the interested user through the functions implemented in the package. The `cosinor2` package is envisioned as an extension to the previous `cosinor` package developed by Michael Sachs, but with additional functionalities.
+
+Cosinor is used to fit sine regression models to data. This vignette presumes that the user has theoretical knowledge of cosinor models. To learn more, users are directed to read the article by [Cornélissen (2014)](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3991883/).
+
+```{r, echo = F}
+library(cosinor2)
+```
+
+# Population-mean cosinor
+
+The first function in this vignette will be the `population.cosinor.lm` function which implements the population-mean cosinor in R. Population-mean cosinor is a statistical procedure that implements sine regression (cosinor) to a greater number of individuals, as opposed to the "standard", single cosinor, that implements it only on one individual/series. Population-mean cosinor procedure consists of fitting single cosinor models to data of each individual separately and averagning cosinor parameters afterwards. However, statistical tests and confidence interval calculation are different than in the case of single cosinor. 
+
+The required arguments of the `population.cosinor.lm` function are:
+
+* `data` - A data frame that contains subjects' responses over time. Each row should represent a subject and each column should represent a timepoint at which the data has been collected.
+* `time` - A numeric vector that contains the times at which the data was collected.
+* `period` - A period that will be used in fitting the model (duration of one cycle of rhythm). Cosinor models do not estimate the best-fitting periods like all other cosinor parameters. Instead, the user is expected to provide it. 
+
+The optional arguments are:
+
+* `na.action` - What to do with the missing data. Default is `na.omit`.
+* `alpha` - Significance level for calculating confidence intervals of cosinor parameters. Defaults to .05.
+* `plot` - Whether or not you want to display the plot after the analysis. Defaults to `TRUE`.
+
+The function can be used as follows:
+
+
+```{r}
+fit.panas.cosinor <- population.cosinor.lm(data = PANAS_november, time = PANAS_time, period = 7)
+```
+
+The output shows the cosinor parameters and the graph. The coefficients can be accessed by `fit.panas.cosinor$coefficients`. If the user requires, they can also access more information on the fitted model. For example, the confidence intervals of the parameters would be retrieved by:
+
+```{r}
+fit.panas.cosinor$conf.ints
+```
+
+It must be noted that the confidence interval of the acrophase cannot be calculated if the confidence interval of the amplitude includes 0. The user may also access the observed mean of the data, fitted values or residuals by:
+
+```{r}
+fit.panas.cosinor$emp.mean
+fit.panas.cosinor$fitted.values
+fit.panas.cosinor$residuals
+```
+
+Furthermore, all the single cosinors will also be kept after analysis. They are kept in the `single.cos` list. The user could access the single cosinor analysis object of the sixth subject by:
+
+```{r}
+fit.panas.cosinor$single.cos[[6]]
+```
+
+Single cosinor parameters of all subjects can be accessed as follows:
+
+```{r}
+fit.panas.cosinor$pop.mat
+```
+
+# Acrophase correction
+
+If a single cosinor model was fitted previously, it is desirable to use the `correct.acrophase` function. This need arises because arcus tangent is used to calculate the acrophase (see the aforementioned article by Cornélissen for details and formulae). However, there can be more angles with the same value of arcus tangent and not all of them are correct. This function can, therefore, be used to place the acrophase in the correct quadrant. For example, if a single cosinor model is fit to the air temperature data:
+
+```{r}
+fit.temp.cosinor <- cosinor.lm(Temperature ~ time(Time), period = 24, data = temperature_zg)
+```
+
+... the value of the acrophase can be retrieved:
+
+```{r}
+fit.temp.cosinor$coefficients
+```
+
+... however, it might not be the appropriate value of the acrophase. Therefore, the `correct.acrophase` function can be used to put the value in the appropriate quadrant:
+
+```{r}
+correct.acrophase(fit.temp.cosinor)
+```
+
+The output now shows the correct value of the acrophase.
+
+# Rhythm detection test
+
+After fitting the model, the fit of the model should be assessed. This can be done by using the rhythm detection test:
+
+```{r}
+cosinor.detect(fit.panas.cosinor)
+```
+
+The output shows the *F* ratio, degrees of freedom and the *p*-value. If we accept the 5% significance criterion, the tested model would fit to the data. 
+
+Rhythm detection test can also be used on single cosinor models, thus extending the `cosinor` package:
+
+```{r}
+cosinor.detect(fit.temp.cosinor)
+```
+
+This model also fits the data good.
+
+# Percent Rhythm
+
+After the fit of the model is assessed, it can be useful to chech the relative power of the rhythm by checking the proportion of the variance explained by the rhythm (Percent Rhythm). This can be done using the `cosinor.PR` function:
+
+```{r}
+cosinor.PR(fit.panas.cosinor)
+```
+
+The output shows the correlation between observed and estimated data, coefficient of determination (squared correlation) and the *p*-value showing if the correlation is significant or not. As previously, the function can also be run on the single cosinor models:
+
+```{r}
+cosinor.PR(fit.temp.cosinor)
+```
+
+# Periodogram
+
+However, in some cosinor analyses, the users might not have a prior idea on the best-fitting period. In this case, the periodogram can be used to find candidates for the best fitting period. To construct a periodogram, a series of cosinor analyses are conducted, each using a different period. The best-fitting period can be thought of as a period that will maximalize the proportion of explained variance. The periodogram is, then, just a plot showing the proportion of explained variance by each period. This approach has been implemented in the `cosinor2` package.
+
+The required arguments to this function are:
+
+* `data` - A data frame that contains subjects' responses over time. Each row should represent a subject and each column should represent a timepoint at which the data has been collected.
+* `time` - A numeric vector that contains the times at which the data was collected.
+
+The optional arguments are:
+
+* `periods` - A vector of periods that the user wants to include in construction of the periodogram. Defaults to the same vector as provided in the `time` argument.
+* `na.action` - What to do with the missing data. Default is `na.omit`.
+* `alpha` - Significance level for determining if the model with a given period fits well to the data. Defaults to .05.
+
+The function is used as follows:
+
+```{r}
+periodogram(data = PANAS_november, time = PANAS_time)
+```
+
+The output will inform the user of the best-fitting period. The same information can be seen from the plot. Furthermore, periods with rhythms that fit the data well are represented by dots and periods with rhythms that do not fit the data well are represented by crosses.
+
+In some situations, it can happen that the measurement times are not the times we want test for model fit. For example, the positive affect dataset included in this package contains data that was collected at 10 AM, 12 PM, 2 PM, 4 PM, 6 PM and 8 PM, but the periods that are actually interesting for testing are 1 - 24, since the rhythm is presumed to be circadian. `periods` argument can be used in such a situation as follows:
+
+```{r}
+periodogram(data = PA_extraverts, time = PA_time, periods = 1:24)
+```
+
+Users should note that the first two periods are never tested in the periodogram analysis. This is because the estimated curve doesn't take on the sinusoidal shape if the number of timepoints is lesser than 3. However, users should not "cut-off" timepoints from the `periods` argument, as the first two periods will automatically get "cut-off" by the code. In other words, the correct call to argument in the previous example is indeed `1:24` and not `3:24`.
+
+Users should also note that, if the midnight is included in their time and/or periods vector, it should be coded as `24` and not as `0`.
+
+Like previous functions, it can also be used on the data intended for single cosinor analysis.
+
+# Comparison of cosinor parameters of two populations
+
+Certain users may also wish to compare if the population cosinor parameters of two populations are equal. In order to assess this, models firstly need to be fit to the data:
+
+```{r}
+fit.pa_ext.cosinor <- population.cosinor.lm(data = PA_extraverts, time = PA_time, period = 24)
+fit.pa_int.cosinor <- population.cosinor.lm(data = PA_introverts, time = PA_time, period = 24)
+```
+
+Equality of parameters can be compared as follows:
+
+```{r}
+cosinor.poptests(fit.pa_ext.cosinor, fit.pa_int.cosinor)
+```
+
+The output shows the *F* ratio, degrees of freedom and the *p*-value for MESOR, amplitude and acrophase. For convenience, it also shows the values of the parameters in the two populations.
+
+Users should note that the acrophases of the two populations cannot be compared if their amplitudes are significantly different.
+
+# Serial sections
+
+Lastly, serial sections are a method applied to analyze non-stationary data. Stationary cosinor models presume that the values of cosinor parameters do not change over time. However, in some cases it is evident that those changes are happening. A good example of this is global warming, where the MESOR of the temperature is increasing over time. 
+
+To analyze such changes, a cosinor model can be fitted just on a section of the data and calculate cosinor parameters in that section. After that, cosinor model can be fitted on another section of the data. If this process is repeated multiple times, changes in cosinor parameters can be recorded as they change over sections. For easy interpretation, they can be plotted.
+
+There are two key elements to defining serial section analysis. The first one is the *interval*. The interval is the length of the section of data that will be analyzed while successively fitting the cosinor model to data. The second one is the *increment*. The increment regulates the number of timepoints by which the interval will be displaced during the analysis.
+
+For example, if the interval is 5 and increment is 1, the cosinor model would first be fit to the data collected at 1st through 5th measurement times. After that, it would be fit to the data collected at 2nd through 6th measurement times etc. Note that in this case, the sections are overlapping - both the first and the second interval contain data collected at 2nd through 5th measurement points.
+
+However, the sections can also be non-overlapping. This is the case when the interval and increment are equal. For example, if both the interval and the increment are 5, the first cosinor model will be fit to the data collected at 1st through 5th measurement points. But, the next interval will be fitted to the 6th through 10th measurement points. In this case, the sections do not overlap. Obviously, the increment cannot be higher than the interval as this results in data loss.
+
+The required arguments to this function are:
+
+* `data` - A data frame that contains subjects' responses over time. Each row should represent a subject and each column should represent a timepoint at which the data has been collected.
+* `time` - A numeric vector that contains the times at which the data was collected.
+* `period` - Duration of one cycle of rhythm.
+* `interval` - Length of the interval.
+* `increment` - Length of the increment.
+
+The optional arguments are:
+
+* `na.action` - What to do with the missing data. Default is `na.omit`.
+* `alpha` - Significance level for calculating confidence intervals. Defaults to .05.
+
+The function is used as follows:
+
+```{r}
+fit.panas.ssections <- ssections(data = PANAS_november, time = PANAS_time, period = 7, interval = 7, increment = 1)
+```
+
+The function will generate the plot that is used for interpretation of the serial section analysis (vignette limits the size of the plots, so it is preferrable to look at the above plot after running the function in R). The plot is actually a collection of plots stacked on top of each other. The first plot is the chronogram, showing the observed mean over time. 
+
+The following three plots show how MESOR, amplitude and acrophase change over sections. Their confidence intervals are also shown. Users should note that, as mentioned previously, confidence intervals of the acrophase cannot always be calculated. Therefore, the plot of the acrophase may not show confidence intervals in all sections. Furthermore, users should remember that the acrophase is a circular variable. This means that the change from 2°to 358°is not a change of 356°, but a change of 4°.
+
+The fourth plot shows the *p*-value from the rhythm detection test in each section. Two dashed lines are also shown on the plot, representing the usual .05 and .01 significance levels. The last plot simply shows the number of measurements taken in each section. 
+
+Other useful information may also be accessed after analysis. Users may access the empirical mean  by calling:
+
+```{r}
+fit.panas.ssections$emp.mean
+```
+
+Coefficients in each section and the *p*-values of the rhythm detection test can be accessed by:
+
+```{r}
+fit.panas.ssections$coefficients
+fit.panas.ssections$`p-values`
+```
+
+Also, cosinor objects of models calculated in each section are stored in the `cosinors` object. For example, the cosinor model calcualted on the third section can be accessed by:
+
+```{r}
+fit.panas.ssections$cosinors[[3]]
+```
+
+This function can also be used with data intended to be analyzed by single cosinor. 
+
+Users should note that R performs listwise deletion while calculating regression models and therefore results may differ from other software packages that use pairwise deletion.
