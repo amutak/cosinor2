@@ -20,7 +20,7 @@ This vignette is intended to be a short guide to using the `cosinor2` package. T
 
 Cosinor is used to fit sine regression models to data. This vignette presumes that the user has theoretical knowledge of cosinor models. To learn more, users are directed to read the article by [Cornélissen (2014)](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3991883/).
 
-```{r, echo = F}
+```{r, echo = F, message = F, warning = F}
 library(cosinor2)
 ```
 
@@ -43,7 +43,7 @@ The optional arguments are:
 The function can be used as follows:
 
 
-```{r}
+```{r, fig.align = "center", fig.height = 6, fig.width = 6}
 fit.panas.cosinor <- population.cosinor.lm(data = PANAS_november, time = PANAS_time, period = 7)
 ```
 
@@ -57,7 +57,9 @@ It must be noted that the confidence interval of the acrophase cannot be calcula
 
 ```{r}
 fit.panas.cosinor$emp.mean
+
 fit.panas.cosinor$fitted.values
+
 fit.panas.cosinor$residuals
 ```
 
@@ -144,7 +146,7 @@ The optional arguments are:
 
 The function is used as follows:
 
-```{r}
+```{r, message = F, warning = F, results = "hide", fig.align = "center", fig.width = 6, fig.height = 6}
 periodogram(data = PANAS_november, time = PANAS_time)
 ```
 
@@ -152,7 +154,7 @@ The output will inform the user of the best-fitting period. The same information
 
 In some situations, it can happen that the measurement times are not the times we want test for model fit. For example, the positive affect dataset included in this package contains data that was collected at 10 AM, 12 PM, 2 PM, 4 PM, 6 PM and 8 PM, but the periods that are actually interesting for testing are 1 - 24, since the rhythm is presumed to be circadian. `periods` argument can be used in such a situation as follows:
 
-```{r}
+```{r, message = F, warning = F, results = "hide", fig.align = "center", fig.width = 6, fig.height = 6}
 periodogram(data = PA_extraverts, time = PA_time, periods = 1:24)
 ```
 
@@ -166,7 +168,7 @@ Like previous functions, it can also be used on the data intended for single cos
 
 Certain users may also wish to compare if the population cosinor parameters of two populations are equal. In order to assess this, models firstly need to be fit to the data:
 
-```{r}
+```{r, fig.align = "center", fig.height = 6, fig.width = 6}
 fit.pa_ext.cosinor <- population.cosinor.lm(data = PA_extraverts, time = PA_time, period = 24)
 fit.pa_int.cosinor <- population.cosinor.lm(data = PA_introverts, time = PA_time, period = 24)
 ```
@@ -208,7 +210,7 @@ The optional arguments are:
 
 The function is used as follows:
 
-```{r}
+```{r, message = F, warning = F, results = "hide", fig.width = 6, fig.height = 12}
 fit.panas.ssections <- ssections(data = PANAS_november, time = PANAS_time, period = 7, interval = 7, increment = 1)
 ```
 
@@ -228,6 +230,7 @@ Coefficients in each section and the *p*-values of the rhythm detection test can
 
 ```{r}
 fit.panas.ssections$coefficients
+
 fit.panas.ssections$`p-values`
 ```
 
